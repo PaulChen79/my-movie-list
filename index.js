@@ -3,6 +3,8 @@ const INDEX_URL = BASE_URL + '/api/v1/movies/'
 const POSTER_URL = BASE_URL + '/posters/'
 const panel = document.querySelector("#data-panel")
 const movieModelTitle = document.querySelector("#movie-modal-title")
+const searchForm = document.querySelector("#search-form")
+const searchInput = document.querySelector('#search-input')
 const movies = []
 
 const renderMovie = (data) => {
@@ -42,6 +44,22 @@ const showMovieModal = (id) => {
             modalDescription.innerText = data.description
         })
 }
+const searching = (event) => {
+    event.preventDefault()
+    const keyWord = searchInput.value.trim().toLowerCase()
+    let filteredMovies = []
+
+    if (!keyWord.length) {
+        renderMovie(movies)
+    }
+
+    filteredMovies = movies.filter((movie) => movie.title.toLowerCase().includes(keyWord))
+
+    if (filteredMovies.length === 0) {
+        return alert(`沒有符合${searchInput.value}的結果`)
+    }
+    renderMovie(filteredMovies)
+}
 
 axios
     .get(INDEX_URL)
@@ -55,3 +73,5 @@ panel.addEventListener("click", (event) => {
         showMovieModal(event.target.dataset.id)
     }
 })
+
+searchForm.addEventListener("submit", searching)
