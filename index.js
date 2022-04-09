@@ -5,7 +5,11 @@ const panel = document.querySelector("#data-panel")
 const movieModelTitle = document.querySelector("#movie-modal-title")
 const searchForm = document.querySelector("#search-form")
 const searchInput = document.querySelector('#search-input')
+const paginators = document.querySelector('#paginator')
+
+const movies_per_page = 12
 const movies = []
+let filteredMovies = []
 
 const renderMovie = (data) => {
     let movieHTML = ""
@@ -29,6 +33,16 @@ const renderMovie = (data) => {
     })
     panel.innerHTML = movieHTML
 }
+const renderPaginator = (amount) => {
+    const numbersPerPage = Math.ceil(amount / movies_per_page)
+    let pagesHTML = ""
+    for (let page = 1; page <= numbersPerPage; page++) {
+        pagesHTML += `
+            <li class="page-item"><a class="page-link" href="#" data-page="${page}">${page}</a></li>
+        `
+    }
+    paginators.innerHTML = pagesHTML
+}
 const showMovieModal = (id) => {
     const modalTitle = document.querySelector('#movie-modal-title')
     const modalImage = document.querySelector('#movie-modal-image')
@@ -44,22 +58,6 @@ const showMovieModal = (id) => {
             modalDescription.innerText = data.description
         })
 }
-const searching = (event) => {
-    event.preventDefault()
-    const keyWord = searchInput.value.trim().toLowerCase()
-    let filteredMovies = []
-
-    if (!keyWord.length) {
-        renderMovie(movies)
-    }
-
-    filteredMovies = movies.filter((movie) => movie.title.toLowerCase().includes(keyWord))
-
-    if (filteredMovies.length === 0) {
-        return alert(`沒有符合${searchInput.value}的結果`)
-    }
-    renderMovie(filteredMovies)
-}
 const addToLocalStorage = (id) => {
     const favList = JSON.parse(localStorage.getItem("favoriteMovies")) || []
     const movie = movies.find(movie => movie.id === id)
@@ -70,13 +68,20 @@ const addToLocalStorage = (id) => {
     favList.push(movie)
     localStorage.setItem("favoriteMovies", JSON.stringify(favList))
 }
+const getMoviesByPage = (page) => {
+    const data = filteredMovies.length ? filteredMovies : movies
+    const start = (page - 1) * movies_per_page
+    return data.slice(start, start + movies_per_page)
+}
 
 axios
     .get(INDEX_URL)
     .then(response => {
         movies.push(...response.data.results)
-        renderMovie(movies)
+        renderPaginator(movies.length)
+        renderMovie(getMoviesByPage(1))
     })
+    .catch(error => console.log(error))
 
 panel.addEventListener("click", (event) => {
     if (event.target.matches(".btn-show-movie")) {
@@ -86,4 +91,25 @@ panel.addEventListener("click", (event) => {
     }
 })
 
-searchForm.addEventListener("submit", searching)
+paginators.addEventListener("click", (event) => {
+    if (event.target.tagName !== "A") return
+    const page = event.target.dataset.page
+    renderMovie(getMoviesByPage(page))
+})
+
+searchForm.addEventListener("submit", (event) => {
+    event.preventDefault()
+    const keyWord = searchInput.value.trim().toLowerCase()
+
+    if (keyWord.length === 0) {
+        return renderMovie(getMoviesByPage(1))
+    }
+
+    filteredMovies = movies.filter((movie) => movie.title.toLowerCase().includes(keyWord))
+
+    if (filteredMovies.length === 0) {
+        return alert(`沒有符合${searchInput.value}的結果`)
+    }
+    renderPaginator(filteredMovies.length)
+    renderMovie(getMoviesByPage(1))
+})
